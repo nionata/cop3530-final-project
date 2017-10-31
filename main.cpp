@@ -7,3 +7,12 @@
 //
 
 #include "main.hpp"
+#include <iostream>
+#include <string>
+
+int main() {
+	
+	Bank * ourBank = new Bank();
+	
+	return 0;
+}

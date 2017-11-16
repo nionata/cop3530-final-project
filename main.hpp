@@ -46,19 +46,19 @@ class Customer {
 private:
 	vector<Account *> accounts;
 	string name;
-	long ufid;
-	int pin;
+	string ufid;
+	string pin;
 public:
-	Customer(string name, long ufid, int pin);
+	Customer(string name, string ufid, string pin);
 	void loadAccounts();
 	void createAccount(int type);
 	void deleteAccount(long accNum);
 	void setName(string name);
-	void setUfid(long ufid);
-	void setPin(int pin);
+	void setUfid(string ufid);
+	void setPin(string pin);
 	string getName();
-	long getUfid();
-	int getPin();
+	string getUfid();
+	string getPin();
 	Account* getAccount(long accNum);
 };
 
@@ -67,9 +67,9 @@ private:
 	Customer* currentCustomer;
 public:
 	Bank();
-	void createCustomer(string name, long ufid, int pin);
+	void createCustomer(string name, string ufid, string pin);
 	void deleteCurrentCustomer();
-	bool signIn(long ufid, int pin);
+	bool signIn(string ufid, string pin);
 	void signOut();
 	Customer* getCurrentCustomer();
 };

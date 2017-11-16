@@ -64,11 +64,9 @@ public:
 
 class Bank {
 private:
-	vector<Customer *> customers;
 	Customer* currentCustomer;
 public:
 	Bank();
-	void loadCustomers();
 	void createCustomer(string name, long ufid, int pin);
 	void deleteCurrentCustomer();
 	bool signIn(long ufid, int pin);

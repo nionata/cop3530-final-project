@@ -17,27 +17,14 @@
 
 Bank::Bank() {
 	currentCustomer = NULL;
-	loadCustomers();
-	
-	//cout << customers[0]->getName() << endl;
-}
-
-void Bank::loadCustomers() {
-	//Get file path
-	//loop thru customer folder
-	//push new customer objects to the vector
-	
-	
-	//file path
-	//for(int i = 0; file path.exist.next) {
-	//    customers.push_back(new Customer(fileLine0, fileLine1, fileLine2));
-	//}
 }
 
 void Bank::createCustomer(string name, long ufid, int pin) {
 	//Create new file
+	string path = "./customers/" + to_string(ufid) + ".txt";
+	cout << path;
 	ofstream newFile;
-	newFile.open(to_string(ufid) + ".txt");
+	newFile.open(path);
 	if(!newFile) {
 		return;
 	}
@@ -45,7 +32,7 @@ void Bank::createCustomer(string name, long ufid, int pin) {
 	newFile.close();
 	
 	//Add new customer to the vector
-	customers.push_back(new Customer(name, ufid, pin));
+	currentCustomer = new Customer(name, ufid, pin);
 	
 	return;
 }
@@ -57,12 +44,8 @@ void Bank::deleteCurrentCustomer() {
 }
 
 bool Bank::signIn(long ufid, int pin) {
-	for(int i = 0; i < customers.size(); i++) {
-		if(customers[i]->getUfid() == ufid && customers[i]->getPin() == pin) {
-			currentCustomer = customers[i];
-			return true;
-		}
-	}
+	
+	
 	return false;
 }
 

@@ -10,6 +10,8 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <stdio.h>
+#include <typeinfo>
 
 //
 //  Bank Function Declarations
@@ -19,15 +21,17 @@ Bank::Bank() {
 	currentCustomer = NULL;
 }
 
-void Bank::createCustomer(string name, long ufid, int pin) {
+void Bank::createCustomer(string name, string ufid, string pin) {
 	//Create new file
-	string path = "./customers/" + to_string(ufid) + ".txt";
+	string path = "./customers/" + ufid + ".txt";
 	cout << path;
 	ofstream newFile;
 	newFile.open(path);
+	
 	if(!newFile) {
 		return;
 	}
+	
 	newFile << name << "\n" << ufid << "\n" << pin << endl;
 	newFile.close();
 	
@@ -38,13 +42,35 @@ void Bank::createCustomer(string name, long ufid, int pin) {
 }
 
 void Bank::deleteCurrentCustomer() {
-	//Get file path
-	//Delete current custsomer file
-	//Reload customers
+	string path = "./customers/" + (currentCustomer->getUfid()) + ".txt";
+
+	if(remove(path.c_str()) !=0 ) {
+		//failed to deleted
+	} else {
+		//success
+	}
+	
+	return;
 }
 
-bool Bank::signIn(long ufid, int pin) {
+bool Bank::signIn(string ufid, string pin) {
+	string path = "./customers/" + ufid + ".txt";
+	ifstream customerFile;
+	customerFile.open(path);
 	
+	if(!customerFile) {
+		return false;
+	}
+	
+	string potPin = "";
+	getline(customerFile, potPin);
+	
+	if(potPin == pin) {
+		currentCustomer = new Customer("", ufid, pin);
+		return true;
+	} else {
+		return false;
+	}
 	
 	return false;
 }
@@ -67,7 +93,7 @@ Customer* Bank::getCurrentCustomer() {
  void setPin(int pin);
  */
 
-Customer::Customer(string name, long ufid, int pin) {
+Customer::Customer(string name, string ufid, string pin) {
 	this->name = name;
 	this->ufid = ufid;
 	this->pin = pin;
@@ -103,11 +129,11 @@ string Customer::getName() {
 	return name;
 }
 
-long Customer::getUfid() {
+string Customer::getUfid() {
 	return ufid;
 }
 
-int Customer::getPin() {
+string Customer::getPin() {
 	return pin;
 }
 
@@ -147,28 +173,80 @@ double Account::getBal() {
 	return bal;
 }
 
-void signIn(Bank * bank) {
-	long ufid = 0;
-	int pin = 0;
+void printSignedInMenu() {
+	cout << "**************************"
+	<< endl
+	<< "Signed In Menu"
+	<< endl
+	<< "1. View Accounts"
+	<< endl
+	<< "2. Delete Membership"
+	<< endl
+	<< "3. Sign Out"
+	<< endl
+	<< "**************************"
+	<< endl;
+}
+
+void signedInMenu(Bank * bank) {
+	int menuSelection = 0;
 	
-	cout << "UFID - ";
+	printSignedInMenu();
+	
+	cout << "Selection - ";
+	cin >> menuSelection;
+	
+	while(cin.fail()) {
+		cout << "Invalid input! Try a new menu option - ";
+		cin >> menuSelection;
+	}
+	
+	switch (menuSelection) {
+		case 1:
+			cout << "This is our accounts boooiiiiiii";
+			break;
+		case 2:
+			bank->deleteCurrentCustomer();
+			break;
+		case 3:
+			//booling = false;
+			cout << endl << "Later Gator!" << endl;
+			break;
+		default:
+			cout << "Invalid input! Try a new menu option";
+			cin.clear();
+			cin.ignore();
+			break;
+			
+	}
+	
+	return;
+}
+
+void signIn(Bank * bank) {
+	string ufid = "";
+	string pin = "";
+	
+	cout << "Please enter your:"
+		<< endl
+		<< "UFID (8 digits w/out a dash) - ";
 	cin >> ufid;
 	
 	cout << "Pin - ";
 	cin >> pin;
 	
 	if(bank->signIn(ufid, pin)) {
-		//call signined menu
+		signedInMenu(bank);
 	} else {
-		cout << "Those credentials did not match any membership to our bank!\n";
+		cout << "Those credentials did not match or there isn't any membership to our bank!\n";
 	}
 }
 
 void createMembership(Bank * bank) {
-	long ufid = 0;
-	int pin = 0;
+	string ufid = "";
+	string pin = "";
 	
-	cout << "UFID - ";
+	cout << "UFID (8 digits w/out a dash) - ";
 	cin >> ufid;
 	
 	cout << "Pin - ";
@@ -177,22 +255,39 @@ void createMembership(Bank * bank) {
 	cout << "Test: " << pin << ufid;
 }
 
+void printMainMenu() {
+	cout << "**************************"
+		<< endl
+		<< "Main Menu"
+		<< endl
+		<< "1. Sign In"
+		<< endl
+		<< "2. Create Membership"
+		<< endl
+		<< "3. Exit"
+		<< endl
+		<< "**************************"
+		<< endl;
+}
+
 int main() {
 	Bank * ourBank = new Bank();
 	
-	ourBank->createCustomer("Test", 1231212, 1234);
+	//ourBank->createCustomer("Test", 1231212, 1234);
 	
 	bool booling = true;
 	int menuSelection = 0;
 	//int choice = 0;
 	
-	cout << "Welcome to the Gator Bank!\n";
+	cout << "Welcome to the Gator Bank!" << endl << endl;
 	
 	while(booling) {
-		cout << "Main Menu\n" << endl << "1. Sign In\n" << "2. Create Membership\n" << "3. Exit\n" << "Selection - ";
+		printMainMenu();
+		
+		cout << "Selection - ";
 		cin >> menuSelection;
 		
-		while(!cin.fail()) {
+		while(cin.fail()) {
 			cout << "Invalid input! Try a new menu option - ";
 			cin >> menuSelection;
 		}
@@ -206,6 +301,7 @@ int main() {
 				break;
 			case 3:
 				booling = false;
+				cout << endl << "Later Gator!" << endl;
 				break;
 			default:
 				cout << "Invalid input! Try a new menu option";

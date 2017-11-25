@@ -99,6 +99,7 @@ public:
   HistoryNode* head;
   History();
   void pushHistory(string account, double bal, string t, string act);
+  void appendHistory(string account, double bal, string t, string act);
 };
 
 History::History()
@@ -115,6 +116,25 @@ void History::pushHistory(string account, double bal, string t, string act)
   temp->action = act;
   temp->next = head;
   head = temp;
+}
+
+void History::appendHistory(string account, double bal, string t, string act)
+{
+  if(!head)
+    pushHistory(account, bal, t, act);
+  else
+  {
+    HistoryNode* current = head;
+    while(current->next)
+      current = current->next;
+
+    HistoryNode* temp = new HistoryNode();
+    temp->accountNum = account;
+    temp->balance = bal;
+    temp->time = t;
+    temp->action = act;
+    current->next = temp;
+  }
 }
 
 class Customer
@@ -140,6 +160,7 @@ public:
   void savingDeposit();
   void checkingWithdraw();
   void transfer();
+  bool ifAllAccountZero();
   bool isDigits(string str);
   string getName();
   string getUfid();
@@ -170,6 +191,29 @@ Customer::Customer()
 string Customer::getUfid()
 {
   return ufid;
+}
+
+bool Customer::ifAllAccountZero()
+{
+  AccountNode* temp = checking.head;
+  while(temp)
+  {
+    if(temp->balance != 0)
+      return false;
+    
+    temp = temp->next;
+  }
+
+  temp = saving.head;
+  while(temp)
+  {
+    if(temp->balance != 0)
+      return false;
+    
+    temp = temp->next;
+  }
+
+  return true;
 }
 
 void Customer::deleteCheckingAccount()
@@ -482,7 +526,7 @@ void Customer::loadCustomer(string path)
     string time = line;
     getline(customerFile,line);
     string action = line;
-    history.pushHistory(accountNum, balance, time, action);
+    history.appendHistory(accountNum, balance, time, action);
   }
 
   customerFile.close();
@@ -991,12 +1035,22 @@ void Bank::cancelMembership()
 
   if(selection == "Y")
   {
-    string path = "./customers/" + currentCustomer->getUfid() + ".txt";
-    remove(path.c_str());
-    cout << endl << "We are sorry that we lost a fellow member!" << endl
-	 << "We will wait for your returning." << endl;
-    delete currentCustomer;
-    currentCustomer = NULL;
+    if(currentCustomer->ifAllAccountZero())
+    {
+      string path = "./customers/" + currentCustomer->getUfid() + ".txt";
+      remove(path.c_str());
+      cout << endl << "We are sorry that we lost a fellow member!" << endl
+	   << "We will wait for your returning." << endl;
+      delete currentCustomer;
+      currentCustomer = NULL;
+    }
+    else
+    {
+      cout << endl << "The membership cannot be canceled" << endl
+	   << "Some accounts' balance are not zero" << endl
+	   << "Return to previous menu" << endl;
+      return;
+    }
   }
   else if(selection == "N")
   {

@@ -1191,7 +1191,7 @@ void Bank::savingAccountMenu()
 {
   string selection = "NA";
  
-  while(selection != "6")
+  while(selection != "5")
   {
     cout << endl;
     currentCustomer->printCheckingAccount();
@@ -1293,7 +1293,7 @@ void Bank::signInMenu()
   
   string selection = "NA";
  
-  while(selection != "5")
+  while(selection != "6")
   {
     cout << endl <<"**************************"
        << endl

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <time.h>
+#include <iomanip>
+#include <sstream>
 using namespace std;
 
 class AccountNode
@@ -49,7 +51,7 @@ public:
   AccountList();
   int countAccount();
   bool ifExist(string tempNum);
-  void deleteAccount(string tempNum);
+  void appendAccount(string tempNum, double bal);
 };
 
 AccountList::AccountList()
@@ -90,6 +92,28 @@ bool AccountList::ifExist(string tempNum)
     }
 
     return false;
+  }
+}
+
+void AccountList::appendAccount(string tempNum, double bal)
+{
+  if(!head)
+  {
+    AccountNode* temp = new AccountNode();
+    temp->accountNum = tempNum;
+    temp->balance = bal;
+    head = temp;
+  } 
+  else
+  {
+    AccountNode* current = head;
+    while(current->next)
+      current = current->next;
+
+    AccountNode* temp = new AccountNode();
+    temp->accountNum = tempNum;
+    temp->balance = bal;
+    current->next = temp;
   }
 }
 
@@ -160,11 +184,14 @@ public:
   void savingDeposit();
   void checkingWithdraw();
   void transfer();
+  void calculateInterest(string currentTime, string tempNum);
   bool ifAllAccountZero();
   bool isDigits(string str);
   string getName();
   string getUfid();
   string currentDateTime();
+  int countLeapYears(int year, int month);
+  long int timeDifference(string pastTime, string currentTime);
   
 private:
   string ufid;
@@ -192,6 +219,98 @@ string Customer::getUfid()
 {
   return ufid;
 }
+
+void Customer::calculateInterest(string currentTime, string tempNum)
+{
+  HistoryNode* tempHistory = history.head;
+  while(tempHistory)
+  {
+    if(tempHistory->accountNum == tempNum)
+      break;
+    tempHistory = tempHistory->next;
+  }
+
+  AccountNode* tempAccount = saving.head;
+  while(tempAccount)
+  {
+    if(tempAccount->accountNum == tempNum)
+      break;
+    tempAccount = tempAccount->next;
+  }
+
+  int days = timeDifference(tempHistory->time, currentTime);
+  double base = tempAccount->balance;
+  double interest = 0;
+  while(days > 0)
+  {
+    double tempInterest = 0;
+    if(days < 365)
+      tempInterest = base * 0.05 / 365 * days;
+    else
+      tempInterest = base * 0.05;
+
+    base += tempInterest;
+    interest = tempInterest;
+    days = days - 365;  
+  }
+
+  tempAccount->balance = base;
+  stringstream stream;
+  stream << fixed << setprecision(2) << interest;
+  string action = stream.str();
+  action = "Interest $" + action + " is added.";
+  history.pushHistory(tempAccount->accountNum, tempAccount->balance, currentTime, action);
+}
+
+int Customer::countLeapYears(int year, int month)
+{
+  if(month <= 2)
+    year--;
+
+  return year / 4 - year / 100 + year / 400;
+}
+
+long int Customer::timeDifference(string pastTime, string currentTime)
+{
+  int pastYear = (pastTime[0] - '0') * 1000 + (pastTime[1] - '0') * 100 + (pastTime[2] - '0') * 10 + (pastTime[3] - '0');
+  int currentYear = (currentTime[0] - '0') * 1000 + (currentTime[1] - '0') * 100 + (currentTime[2] - '0') * 10 +(currentTime[3] - '0');
+  
+  int pastMonth = (pastTime[5] - '0') * 10 + (pastTime[6] - '0');
+  int currentMonth = (currentTime[5] - '0') * 10 + (currentTime[6] - '0');
+
+  int pastDay = (pastTime[8] - '0') * 10 + (pastTime[9] - '0');
+  int currentDay = (currentTime[8] - '0') * 10 + (currentTime[9] - '0');
+
+  int pastHour = (pastTime[11] - '0') * 10 + (pastTime[12] - '0');
+  int currentHour = (currentTime[11] - '0') * 10 + (currentTime[12] - '0');
+
+  int pastMinute = (pastTime[14] - '0') * 10 + (pastTime[15] - '0');
+  int currentMinute = (currentTime[14] - '0') * 10 + (currentTime[15] - '0');
+
+  int pastSecond = (pastTime[17] - '0') * 10 + (pastTime[18] - '0');
+  int currentSecond = (currentTime[17] - '0') * 10 + (currentTime[18] - '0');
+
+
+  const int monthDays[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+  long int daysOfPast = pastYear * 365 + pastDay;
+  for(int i = 0; i < pastMonth - 1; i++)
+    daysOfPast += monthDays[i];
+  daysOfPast += countLeapYears(pastYear, pastMonth);
+
+  long int daysOfCurrent = currentYear * 365 + currentDay;
+  for(int i = 0; i < currentMonth - 1; i++)
+    daysOfCurrent += monthDays[i];
+  daysOfCurrent += countLeapYears(currentYear, currentMonth);
+
+  long int daysDifference = daysOfCurrent - daysOfPast;
+  long int hoursDifference = daysDifference * 24 + (currentHour - pastHour);
+  long int minutesDifference = hoursDifference * 60 + (currentMinute - pastMinute);
+  long int secondsDifference = minutesDifference * 60 + (currentSecond - pastSecond);
+
+  return (secondsDifference - 60);
+}
+
 
 bool Customer::ifAllAccountZero()
 {
@@ -359,31 +478,34 @@ void Customer::addCheckingAccount(string tempNum, double tempBal)
   AccountNode* temp = new AccountNode();
   temp->accountNum = tempNum;
   temp->balance = tempBal;
-  if(!checking.head || checking.head->accountNum[9] != tempNum[9])
+  if(!checking.head || checking.head->accountNum[9] != temp->accountNum[9])
   {
     temp->next = checking.head;
     checking.head = temp;
+    string action = "Account is created!";
+    history.pushHistory(temp->accountNum, tempBal, currentDateTime(), action);
   }
   else
   {
+    temp->accountNum[9]++;
     AccountNode* current = checking.head;
     while(current->next)
     {
-      if(current->next->accountNum[9] != tempNum[9])
+      if(current->next->accountNum[9] != temp->accountNum[9])
       {
 	temp->next = current->next;
 	current->next = temp;
 	string action = "Account is created!";
-	history.pushHistory(tempNum, tempBal, currentDateTime(), action);
+	history.pushHistory(temp->accountNum, tempBal, currentDateTime(), action);
 	return;
       }
+      temp->accountNum[9]++;
       current = current->next;
     }
 
-    temp->accountNum = tempNum;
     current->next = temp;
     string action = "Account is created!";
-    history.pushHistory(tempNum, tempBal, currentDateTime(), action);
+    history.pushHistory(temp->accountNum, tempBal, currentDateTime(), action);
   }
 }
 
@@ -399,31 +521,34 @@ void Customer::addSavingAccount(string tempNum, double tempBal)
   AccountNode* temp = new AccountNode();
   temp->accountNum = tempNum;
   temp->balance = tempBal;
-  if(!saving.head || saving.head->accountNum[9] != tempNum[9])
+  if(!saving.head || saving.head->accountNum[9] != temp->accountNum[9])
   {
     temp->next = saving.head;
     saving.head = temp;
+    string action = "Account is created!";
+    history.pushHistory(temp->accountNum, tempBal, currentDateTime(), action);
   }
   else
   {
+    temp->accountNum[9]++;
     AccountNode* current = saving.head;
     while(current->next)
     {
-      if(current->next->accountNum[9] != tempNum[9])
+      if(current->next->accountNum[9] != temp->accountNum[9])
       {
 	temp->next = current->next;
 	current->next = temp;
 	string action = "Account is created!";
-	history.pushHistory(tempNum, tempBal, currentDateTime(), action);
+	history.pushHistory(temp->accountNum, tempBal, currentDateTime(), action);
 	return;
       }
+      temp->accountNum[9]++;
       current = current->next;
     }
 
-    temp->accountNum = tempNum;
     current->next = temp;
     string action = "Account is created!";
-    history.pushHistory(tempNum, tempBal, currentDateTime(), action);
+    history.pushHistory(temp->accountNum, tempBal, currentDateTime(), action);
   }
 }
 
@@ -444,7 +569,16 @@ void Customer::newCustomer()
     else
     {
       ufid = ufid1;
-      if(!isDigits(ufid) || ufid.length() != 8)
+      string path = "./customers/" + ufid + ".txt";
+      ifstream customerFile;
+      customerFile.open(path);
+      if(customerFile)
+      {
+	cout << "This membership is existed! Please enter another UFID!" << endl;
+	customerFile.close();
+	continue;
+      }
+      else if(!isDigits(ufid) || ufid.length() != 8)
 	cout << "Please enter a valid UFID!" << endl;
       else
 	control = false;
@@ -510,9 +644,9 @@ void Customer::loadCustomer(string path)
     getline(customerFile,line);
     double balance = stod(line);
     if(accountNum[0] == '0')
-      addCheckingAccount(accountNum, balance);
+      checking.appendAccount(accountNum, balance);
     else if(accountNum[0] == '1')
-      addSavingAccount(accountNum, balance);
+      saving.appendAccount(accountNum, balance);
 
     getline(customerFile, line);
   }
@@ -663,7 +797,7 @@ void Customer::printCheckingAccount()
     while(temp)
     {
       cout << "Account#:  " << temp->accountNum << endl;
-      cout << "Balance:   " << temp->balance << endl;
+      cout << "Balance:   " << setprecision(2) << fixed << temp->balance << endl;
       temp = temp->next;
     }
   } 
@@ -679,7 +813,7 @@ void Customer::printSavingAccount()
     while(temp)
     {
       cout << "Account#:  " << temp->accountNum << endl;
-      cout << "Balance:   " << temp->balance << endl;
+      cout << "Balance:   " << setprecision(2) << fixed << temp->balance << endl;
       temp = temp->next;
     }
   } 
@@ -696,7 +830,7 @@ void Customer::printHistory()
   {
     cout << endl << i << ". " << endl
 	 << "Account#:  " << temp->accountNum << endl
-	 << "Balance:   " << temp->balance << endl
+	 << "Balance:   " << setprecision(2) << fixed << temp->balance << endl
 	 << "Time:      " << temp->time << endl
 	 << "Action:    " << temp->action << endl;
     temp = temp->next;
@@ -777,16 +911,28 @@ void Customer::checkingDeposit()
   {
     if(temp->accountNum == tempNum)
     {
-      cout << "Please enter the deposit amount: ";
       double tempAmount;
-      cin >> tempAmount;
-      while(cin.fail())
+      string selection = "N";
+      while(selection != "Y")
       {
-	cout << "Please enter a valid amount: ";
+	cout << "Please enter the deposit amount: ";
 	cin >> tempAmount;
+	while(cin.fail())
+	{
+	  cout << "Please enter a valid amount: ";
+	  cin >> tempAmount;
+	}
+	tempAmount = ((int)(tempAmount*100)) / 100;
+	cout << "Do you mean " << setprecision(2) << fixed << tempAmount << "?"
+	   << endl << "Enter Y/N: ";
+	cin >> selection;
       }
+	
       temp->balance += tempAmount;
-      string action = "Deposit $" + to_string(tempAmount);
+      stringstream stream;
+      stream << fixed << setprecision(2) << tempAmount;
+      string action = stream.str();
+      action = "Deposit $" + action;
       history.pushHistory(temp->accountNum, temp->balance, currentDateTime(), action);
       return;
     }
@@ -812,17 +958,31 @@ void Customer::savingDeposit()
   {
     if(temp->accountNum == tempNum)
     {
-      cout << "Please enter the deposit amount: ";
       double tempAmount;
-      cin >> tempAmount;
-      while(cin.fail())
+      string selection = "N";
+      while(selection != "Y")
       {
-	cout << "Please enter a valid amount: ";
+	cout << "Please enter the deposit amount: ";
 	cin >> tempAmount;
+	while(cin.fail())
+	{
+	  cout << "Please enter a valid amount: ";
+	  cin >> tempAmount;
+	}
+	tempAmount = ((int)(tempAmount*100)) / 100;
+	cout << "Do you mean " << setprecision(2) << fixed << tempAmount << "?"
+	   << endl << "Enter Y/N: ";
+	cin >> selection;
       }
+
+      string currentTime = currentDateTime();
+      calculateInterest(currentTime, temp->accountNum);
       temp->balance += tempAmount;
-      string action = "Deposit $" + to_string(tempAmount);
-      history.pushHistory(temp->accountNum, temp->balance, currentDateTime(), action);
+      stringstream stream;
+      stream << fixed << setprecision(2) << tempAmount;
+      string action = stream.str();
+      action = "Deposit $" + action;
+      history.pushHistory(temp->accountNum, temp->balance, currentTime, action);
       return;
     }
     temp = temp->next;
@@ -833,7 +993,7 @@ void Customer::savingDeposit()
 
 void Customer::checkingWithdraw()
 {
-  cout << endl << "Please enter the account number:";
+  cout << endl << "Please enter the account number: ";
   string tempNum;
   cin >> tempNum;
   AccountNode* temp = checking.head;
@@ -848,20 +1008,32 @@ void Customer::checkingWithdraw()
   {
     if(temp->accountNum == tempNum)
     {
-      cout << "Please enter the withdraw amount: ";
       double tempAmount;
-      cin >> tempAmount;
-      while(cin.fail())
+      string selection = "N";
+      while(selection != "Y")
       {
-	cout << "Please enter a valid amount: ";
+	cout << "Please enter the withdraw amount: ";
 	cin >> tempAmount;
+	while(cin.fail())
+	{
+	  cout << "Please enter a valid amount: ";
+	  cin >> tempAmount;
+	}
+	tempAmount = ((int)(tempAmount*100)) / 100;
+	cout << "Do you mean " << setprecision(2) << fixed << tempAmount << "?"
+	   << endl << "Enter Y/N: ";
+	cin >> selection;
       }
+      
       if(temp->balance - tempAmount < 0)
 	cout << "There is not enough balance in this account!" << endl;
       else
       {
 	temp->balance -= tempAmount;
-	string action = "Withdraw $" + to_string(tempAmount);
+	stringstream stream;
+	stream << fixed << setprecision(2) << tempAmount;
+	string action = stream.str();
+	action = "Withdraw $" + action;
 	history.pushHistory(temp->accountNum, temp->balance, currentDateTime(), action);
       }
       return;
@@ -933,25 +1105,45 @@ void Customer::transfer()
     return;
   }
 
-  cout << "Please enter the transfer amount: ";
   double tempAmount;
-  cin >> tempAmount;
-  while(cin.fail())
+  string selection = "N";
+  while(selection != "Y")
   {
-    cout << "Please enter a valid amount: ";
+    cout << "Please enter the transfer amount: ";
     cin >> tempAmount;
+    while(cin.fail())
+    {
+      cout << "Please enter a valid amount: ";
+      cin >> tempAmount;
+    }
+    tempAmount = ((int)(tempAmount*100)) / 100;
+    cout << "Do you mean " << setprecision(2) << fixed << tempAmount << "?"
+	 << endl << "Enter Y/N: ";
+    cin >> selection;
   }
+  
   if(temp1->balance - tempAmount < 0)
     cout << "There is not enough balance in this account!" << endl;
   else
   {
-    string t = currentDateTime();
+    string currentTime = currentDateTime();
+    if(temp1->accountNum[0] == '1')
+      calculateInterest(currentTime, temp1->accountNum);
+    if(temp2->accountNum[0] == '1')
+      calculateInterest(currentTime, temp2->accountNum);
+    
     temp1->balance -= tempAmount;
-    string action = "Transfer out $" + to_string(tempAmount);
-    history.pushHistory(temp1->accountNum, temp1->balance, t, action);
+    stringstream stream1;
+    stream1 << fixed << setprecision(2) << tempAmount;
+    string action = stream1.str();
+    action = "Transfer out $" + action;
+    history.pushHistory(temp1->accountNum, temp1->balance, currentTime, action);
     temp2->balance += tempAmount;
-    action = "Transfer in $" + to_string(tempAmount);
-    history.pushHistory(temp1->accountNum, temp1->balance, t, action);
+    stringstream stream2;
+    stream2 << fixed << setprecision(2) << tempAmount;
+    action = stream2.str();
+    action = "Transfer in $" + action;
+    history.pushHistory(temp1->accountNum, temp1->balance, currentTime, action);
   }
 }
 
@@ -1194,11 +1386,11 @@ void Bank::savingAccountMenu()
   while(selection != "5")
   {
     cout << endl;
-    currentCustomer->printCheckingAccount();
+    currentCustomer->printSavingAccount();
     
     cout << endl << "**************************"
 	 << endl
-	 << "Checking Account Menu"
+	 << "Saving Account Menu"
 	 << endl
 	 << "1. Deposite"
 	 << endl
@@ -1228,9 +1420,9 @@ void Bank::savingAccountMenu()
     else if(selection == "2")
       currentCustomer->transfer();
     else if(selection == "3")
-      currentCustomer->addCheckingAccount("0"+currentCustomer->getUfid()+"0", 0);
+      currentCustomer->addSavingAccount("1"+currentCustomer->getUfid()+"0", 0);
     else if(selection == "4")
-      currentCustomer->deleteCheckingAccount();
+      currentCustomer->deleteSavingAccount();
     else
       return;
   }
